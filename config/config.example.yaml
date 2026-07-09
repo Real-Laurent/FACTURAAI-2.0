@@ -1,18 +1,19 @@
+# All paths below are relative to the project root (where main.py lives)
+# unless you give an absolute path or a ~/... path — see config/loader.py.
 paths:
-  base: ~/FacturaAI
-  inbox_scan: ~/FacturaAI/inbox/scan
-  inbox_gmail: ~/FacturaAI/inbox/gmail
-  output: ~/FacturaAI/output
-  manual_review: ~/FacturaAI/manual_review
-  rejected: ~/FacturaAI/rejected
-  logs: ~/FacturaAI/logs
-  db: ~/FacturaAI/data/facturas.db
-  exports: ~/FacturaAI/data
+  inbox_scan: inbox/scan
+  inbox_gmail: inbox/gmail
+  output: output
+  manual_review: manual_review
+  rejected: rejected
+  logs: logs
+  db: data/facturas.db
+  exports: data
 
 gmail:
   enabled: false
-  credentials_file: ~/FacturaAI/config/gmail_credentials.json
-  token_file: ~/FacturaAI/config/gmail_token.json
+  credentials_file: config/gmail_credentials.json
+  token_file: config/gmail_token.json
   poll_interval_minutes: 10
   label_filter: "invoice"
   mark_as_read: true
@@ -43,8 +44,8 @@ onedrive:
   enabled: false
   client_id: ""
   tenant_id: ""
-  client_secret_file: ~/FacturaAI/config/onedrive_client_secret.json
-  token_cache_file: ~/FacturaAI/config/onedrive_token_cache.json
+  client_secret_file: config/onedrive_client_secret.json
+  token_cache_file: config/onedrive_token_cache.json
   # Root folder in OneDrive under which YYYY/MM/ archives are created
   root_folder: "FacturaAI"
 
