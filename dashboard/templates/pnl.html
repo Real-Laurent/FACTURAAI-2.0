@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_pnl }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_pnl }}</h1>
+
+<form method="get" style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:1.25rem;flex-wrap:wrap">
+  <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+    {{ t.year }}
+    <select name="year" style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem">
+      {% for y in years %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+    {{ t.quarter }}
+    <select name="quarter" style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem">
+      <option value="0" {% if selected_quarter == 0 %}selected{% endif %}>{{ t.annual_option }}</option>
+      {% for q in [1,2,3,4] %}
+        <option value="{{ q }}" {% if q == selected_quarter %}selected{% endif %}>{{ q }}T</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" style="padding:.38rem .9rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">{{ t.view }}</button>
+  <a href="/pnl/export?year={{ selected_year }}&quarter={{ selected_quarter }}"
+     style="padding:.38rem .9rem;background:#198754;color:#fff;border-radius:4px;font-size:.85rem;text-decoration:none">
+    {{ t.export_csv }}
+  </a>
+</form>
+
+<div class="card" style="max-width:800px;margin-bottom:1.25rem">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1.25rem;border-bottom:2px solid #1a1a2e;padding-bottom:.5rem">
+    <strong style="font-size:1.1rem">{{ t.period }} {{ report.periodo }}</strong>
+    <span class="badge badge-ok">
+      {{ report.invoice_count }} {{ t.inv_singular if report.invoice_count == 1 else t.inv_plural }}
+    </span>
+  </div>
+
+  <h2 style="font-size:.95rem;margin:.5rem 0 .4rem">{{ t.pnl_income_section }}</h2>
+  <table style="margin-bottom:1.25rem">
+    <tbody>
+      <tr>
+        <td>{{ t.pnl_bank_income }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.bank_income) }} €</td>
+      </tr>
+      <tr>
+        <td>{{ t.pnl_cash_income }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.cash_income) }} €</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr style="background:#f0f0f0;font-weight:700">
+        <td>{{ t.pnl_total_income }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.total_income) }} €</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <h2 style="font-size:.95rem;margin:.5rem 0 .4rem">{{ t.pnl_expense_section }}</h2>
+  <table style="margin-bottom:.25rem">
+    <thead>
+      <tr>
+        <th>{{ t.col_category }}</th>
+        <th style="text-align:right">{{ t.col_amount }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cat, amount in report.by_category.items() %}
+      <tr>
+        <td>{{ report.by_category_labels[cat] }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(amount) }} €</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2" style="text-align:center;color:#888;padding:1rem">{{ t.no_data_period }}</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr style="background:#f0f0f0;font-weight:700">
+        <td>{{ t.pnl_total_expenses }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.total_expenses) }} €</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <table style="margin-top:1.25rem">
+    <tfoot>
+      <tr style="background:#f0f0f0;font-weight:700">
+        <td>
+          {{ t.pnl_net_result }}
+          {% if report.net_result > 0 %}
+            <span class="badge badge-ok" style="margin-left:.5rem">+</span>
+          {% elif report.net_result < 0 %}
+            <span class="badge badge-error" style="margin-left:.5rem">-</span>
+          {% endif %}
+        </td>
+        <td style="text-align:right;font-size:1.1rem">{{ '%.2f'|format(report.net_result) }} €</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="card" style="max-width:800px">
+  <strong>{{ t.cash_income_title }}</strong>
+  <p style="font-size:.82rem;color:#555;margin:.4rem 0 .75rem">{{ t.cash_income_hint }}</p>
+
+  <form method="post" action="/cash-income/add" style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem">
+    <input type="hidden" name="year" value="{{ selected_year }}">
+    <input type="hidden" name="quarter" value="{{ selected_quarter }}">
+    <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+      {{ t.col_date }}
+      <input type="date" name="date" required
+             style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem">
+    </label>
+    <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+      {{ t.col_amount }}
+      <input type="number" step="0.01" name="amount" required placeholder="0.00"
+             style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;width:8rem">
+    </label>
+    <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem;flex:1;min-width:180px">
+      {{ t.col_concept }}
+      <input name="description"
+             style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;width:100%">
+    </label>
+    <button type="submit"
+            style="padding:.38rem .9rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">
+      {{ t.cash_income_add }}
+    </button>
+  </form>
+
+  {% if cash_entries %}
+  <table>
+    <thead>
+      <tr>
+        <th>{{ t.col_date }}</th>
+        <th>{{ t.col_concept }}</th>
+        <th style="text-align:right">{{ t.col_amount }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in cash_entries %}
+      <tr>
+        <td>{{ entry.date }}</td>
+        <td>{{ entry.description or '—' }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(entry.amount) }} €</td>
+        <td>
+          <form method="post" action="/cash-income/{{ entry.id }}/delete" style="display:inline">
+            <input type="hidden" name="year" value="{{ selected_year }}">
+            <input type="hidden" name="quarter" value="{{ selected_quarter }}">
+            <button type="submit" style="background:none;border:none;color:#842029;cursor:pointer;font-size:.8rem;padding:0">
+              {{ t.delete_btn }}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="color:#888;font-size:.85rem;padding:.5rem 0">{{ t.cash_income_none }}</div>
+  {% endif %}
+</div>
+{% endblock %}

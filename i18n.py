@@ -20,6 +20,7 @@ _T: dict[str, dict[str, str]] = {
     "nav_390":           {"es": "IVA 390",        "en": "VAT 390",       "zh": "增值税390"},
     "nav_130":           {"es": "IRPF 130",       "en": "IRPF 130",      "zh": "个税130"},
     "nav_100":           {"es": "Renta 100",      "en": "Income Tax 100", "zh": "个税100"},
+    "nav_pnl":           {"es": "Pérdidas y Ganancias", "en": "P&L",     "zh": "损益表"},
     "nav_bank":          {"es": "Banco",          "en": "Bank",          "zh": "银行对账"},
     "nav_review":        {"es": "Revisión",       "en": "Review",        "zh": "待审核"},
     "nav_rejected":      {"es": "Rechazadas",     "en": "Rejected",      "zh": "已拒绝"},
@@ -29,6 +30,7 @@ _T: dict[str, dict[str, str]] = {
     "year":              {"es": "Año",            "en": "Year",          "zh": "年份"},
     "all_years":         {"es": "Todos los años", "en": "All years",     "zh": "全部年份"},
     "quarter":           {"es": "Trimestre",      "en": "Quarter",       "zh": "季度"},
+    "annual_option":     {"es": "Anual",          "en": "Annual",        "zh": "年度"},
     "view":              {"es": "Ver",            "en": "View",          "zh": "查看"},
     "filter":            {"es": "Filtrar",        "en": "Filter",        "zh": "筛选"},
     "clear":             {"es": "Limpiar",        "en": "Clear",         "zh": "清除"},
@@ -195,6 +197,34 @@ _T: dict[str, dict[str, str]] = {
     "casilla_pago":      {"es": "20% s/ rendimiento neto","en": "20% of net income",     "zh": "净收益的20%"},
     "casilla_prior":     {"es": "Pagos fraccionados anteriores", "en": "Prior quarterly payments", "zh": "前几季度已预缴"},
 
+    # ── P&L statement + manual cash income ───────────────────────────────────
+    "page_pnl":          {"es": "Cuenta de Pérdidas y Ganancias",
+                          "en": "Profit & Loss Statement",
+                          "zh": "损益表"},
+    "pnl_income_section": {"es": "Ingresos",       "en": "Income",        "zh": "收入"},
+    "pnl_bank_income":   {"es": "Ingresos bancarios (abonos)",
+                          "en": "Bank income (credits)",
+                          "zh": "银行收入（贷记）"},
+    "pnl_cash_income":   {"es": "Ingresos en efectivo (manual)",
+                          "en": "Cash income (manual)",
+                          "zh": "现金收入（手动）"},
+    "pnl_total_income":  {"es": "TOTAL INGRESOS",  "en": "TOTAL INCOME",  "zh": "总收入"},
+    "pnl_expense_section": {"es": "Gastos por categoría", "en": "Expenses by category", "zh": "按分类支出"},
+    "pnl_total_expenses": {"es": "TOTAL GASTOS",   "en": "TOTAL EXPENSES", "zh": "总支出"},
+    "pnl_net_result":    {"es": "RESULTADO NETO",  "en": "NET RESULT",    "zh": "净利润"},
+    "cash_income_title": {"es": "Ingresos en efectivo",
+                          "en": "Cash income",
+                          "zh": "现金收入"},
+    "cash_income_hint":  {"es": "Para ventas en efectivo que no aparecen en el extracto bancario.",
+                          "en": "For cash sales that won't show up on the bank statement.",
+                          "zh": "用于不会出现在银行对账单中的现金销售。"},
+    "cash_income_add":   {"es": "Añadir",          "en": "Add",           "zh": "添加"},
+    "cash_income_none":  {"es": "Sin ingresos en efectivo registrados para este período.",
+                          "en": "No cash income recorded for this period.",
+                          "zh": "本期无现金收入记录。"},
+    "col_action":        {"es": "Acción",          "en": "Action",        "zh": "操作"},
+    "delete_btn":        {"es": "Eliminar",        "en": "Delete",        "zh": "删除"},
+
     # ── Rejected documents ───────────────────────────────────────────────────
     "page_rejected":     {"es": "Documentos Rechazados", "en": "Rejected Documents", "zh": "已拒绝文档"},
     "rejected_none":     {"es": "No hay documentos rechazados.",
@@ -204,11 +234,13 @@ _T: dict[str, dict[str, str]] = {
     # ── Bank ──────────────────────────────────────────────────────────────────
     "page_bank":         {"es": "Extracto Bancario",     "en": "Bank Statement",  "zh": "银行对账单"},
     "bank_import_title": {"es": "Importar extracto (CSV)","en": "Import statement (CSV)","zh": "导入对账单（CSV）"},
-    "bank_compat":       {"es": ("Compatible con Santander, CaixaBank, BBVA y Sabadell. "
-                                 "Cada archivo sólo se importa una vez."),
-                          "en": ("Compatible with Santander, CaixaBank, BBVA and Sabadell. "
-                                 "Each file can only be imported once."),
-                          "zh": "兼容Santander、CaixaBank、BBVA和Sabadell。每个文件只能导入一次。"},
+    "bank_compat":       {"es": ("CSV o Excel (.xlsx). Compatible con Santander, CaixaBank, BBVA y Sabadell. "
+                                 "Cada archivo sólo se importa una vez. Los abonos (importe positivo) se "
+                                 "cuentan como ingresos — ver la Cuenta de Pérdidas y Ganancias."),
+                          "en": ("CSV or Excel (.xlsx). Compatible with Santander, CaixaBank, BBVA and Sabadell. "
+                                 "Each file can only be imported once. Credits (positive amounts) count as "
+                                 "income — see the P&L statement."),
+                          "zh": "CSV或Excel（.xlsx）。兼容Santander、CaixaBank、BBVA和Sabadell。每个文件只能导入一次。贷记（正数金额）计为收入——参见损益表。"},
     "bank_transactions": {"es": "Movimientos",    "en": "Transactions",  "zh": "交易记录"},
     "bank_matched":      {"es": "Conciliados",    "en": "Matched",       "zh": "已匹配"},
     "bank_unmatched":    {"es": "Sin conciliar",  "en": "Unmatched",     "zh": "未匹配"},

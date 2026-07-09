@@ -102,6 +102,15 @@ def init_db():
             );
             CREATE INDEX IF NOT EXISTS idx_bank_date    ON bank_transactions(date);
             CREATE INDEX IF NOT EXISTS idx_bank_matched ON bank_transactions(matched_invoice_id);
+
+            CREATE TABLE IF NOT EXISTS cash_income (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                date        TEXT NOT NULL,
+                amount      REAL NOT NULL,
+                description TEXT,
+                created_at  TEXT DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_cash_income_date ON cash_income(date);
         """)
     migrate_db()
 
@@ -291,16 +300,74 @@ def get_invoices_for_period(start_date: str, end_date: str,
 
 
 def get_income_for_period(start_date: str, end_date: str) -> float:
-    """Business income (ingresos) for a date range.
+    """Business income (ingresos) for a date range: bank credits (sales
+    deposited to the account) plus manually-entered cash income. Feeds
+    Modelo 130 and Modelo 100, both computed from net income = income -
+    expenses, and the P&L statement (reports/pnl.py)."""
+    return round(
+        get_bank_income_for_period(start_date, end_date)
+        + get_cash_income_total_for_period(start_date, end_date),
+        2,
+    )
 
-    Stub — FacturaAI has only ever tracked expenses (invoices received),
-    never sales/income. This is the seam a future income source plugs into
-    (e.g. NOTA POS sales data, or manual dashboard entry) so Modelo 130 and
-    Modelo 100 — both computed from net income = income - expenses — can be
-    completed without reworking those report modules. Returns 0.0 until
-    a real source is wired up here.
-    """
-    return 0.0
+
+def get_bank_income_for_period(start_date: str, end_date: str) -> float:
+    """Sum of credit (positive-amount) bank transactions in the period —
+    the bank side of income. Debits (negative amounts) are expenses,
+    already matched against invoices elsewhere; see bank._find_match()."""
+    with transaction() as conn:
+        row = conn.execute(
+            """SELECT SUM(amount) FROM bank_transactions
+               WHERE amount > 0 AND date >= ? AND date <= ?""",
+            (start_date, end_date),
+        ).fetchone()
+    return round(row[0] or 0.0, 2)
+
+
+# ---- cash income (manual entry — for sales the bank statement won't show) ----
+
+def insert_cash_income(date: str, amount: float, description: str = "") -> int:
+    with transaction() as conn:
+        cur = conn.execute(
+            "INSERT INTO cash_income (date, amount, description) VALUES (?, ?, ?)",
+            (date, amount, description),
+        )
+        return cur.lastrowid
+
+
+def delete_cash_income(entry_id: int) -> None:
+    with transaction() as conn:
+        conn.execute("DELETE FROM cash_income WHERE id = ?", (entry_id,))
+
+
+def get_cash_income_total_for_period(start_date: str, end_date: str) -> float:
+    with transaction() as conn:
+        row = conn.execute(
+            "SELECT SUM(amount) FROM cash_income WHERE date >= ? AND date <= ?",
+            (start_date, end_date),
+        ).fetchone()
+    return round(row[0] or 0.0, 2)
+
+
+def get_cash_income_for_period(start_date: str, end_date: str) -> list[dict]:
+    with transaction() as conn:
+        rows = conn.execute(
+            """SELECT * FROM cash_income WHERE date >= ? AND date <= ?
+               ORDER BY date DESC, id DESC""",
+            (start_date, end_date),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_all_cash_income(page: int = 1, page_size: int = 50) -> tuple[list[dict], int]:
+    offset = (page - 1) * page_size
+    with transaction() as conn:
+        rows = conn.execute(
+            "SELECT * FROM cash_income ORDER BY date DESC, id DESC LIMIT ? OFFSET ?",
+            (page_size, offset),
+        ).fetchall()
+        count = conn.execute("SELECT COUNT(*) FROM cash_income").fetchone()[0]
+    return [dict(r) for r in rows], count
 
 
 def get_available_years() -> list[int]:

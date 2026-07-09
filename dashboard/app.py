@@ -10,7 +10,7 @@ import db
 from categories import CATEGORY_LABELS, label as cat_label
 from config.loader import get_config
 from i18n import get_translations, LANGUAGES
-from reports import modelo100, modelo130, modelo303, modelo390
+from reports import modelo100, modelo130, modelo303, modelo390, pnl as pnl_mod
 
 log = logging.getLogger(__name__)
 app = Flask(__name__)
@@ -283,6 +283,67 @@ def export_100():
 
 
 # ---------------------------------------------------------------------------
+# P&L statement + manual cash income
+# ---------------------------------------------------------------------------
+
+@app.route("/pnl")
+def pnl_view():
+    years = db.get_available_years()
+    default_year, default_quarter = _default_year_quarter(years)
+    year = int(request.args.get("year", default_year))
+    quarter_raw = request.args.get("quarter", str(default_quarter))
+    quarter = int(quarter_raw) if quarter_raw and quarter_raw != "0" else None
+
+    report = pnl_mod.generate(year, quarter)
+    cash_entries = db.get_cash_income_for_period(report["start_date"], report["end_date"])
+    return render_template(
+        "pnl.html", report=report, years=years,
+        selected_year=year, selected_quarter=quarter or 0,
+        cash_entries=cash_entries,
+    )
+
+
+@app.route("/pnl/export")
+def export_pnl():
+    year = int(request.args.get("year", datetime.now().year))
+    quarter_raw = request.args.get("quarter", "0")
+    quarter = int(quarter_raw) if quarter_raw and quarter_raw != "0" else None
+    report = pnl_mod.generate(year, quarter)
+    csv_text = pnl_mod.as_csv(report)
+    resp = make_response(csv_text)
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    suffix = f"T{quarter}" if quarter else "anual"
+    resp.headers["Content-Disposition"] = f'attachment; filename="pnl_{year}_{suffix}.csv"'
+    return resp
+
+
+@app.route("/cash-income/add", methods=["POST"])
+def cash_income_add():
+    date = request.form.get("date") or ""
+    description = request.form.get("description") or ""
+    try:
+        amount = float(request.form.get("amount", ""))
+    except ValueError:
+        amount = None
+    if date and amount is not None:
+        db.insert_cash_income(date, amount, description)
+    else:
+        log.warning("Rejected cash income entry with missing date/amount: %r", request.form)
+
+    year = request.form.get("year", "")
+    quarter = request.form.get("quarter", "")
+    return redirect(url_for("pnl_view", year=year, quarter=quarter))
+
+
+@app.route("/cash-income/<int:entry_id>/delete", methods=["POST"])
+def cash_income_delete(entry_id):
+    db.delete_cash_income(entry_id)
+    year = request.form.get("year", "")
+    quarter = request.form.get("quarter", "")
+    return redirect(url_for("pnl_view", year=year, quarter=quarter))
+
+
+# ---------------------------------------------------------------------------
 # Categories
 # ---------------------------------------------------------------------------
 
@@ -322,12 +383,7 @@ def bank_import():
     if not f or not f.filename:
         return redirect(url_for("bank"))
     try:
-        raw = f.read()
-        try:
-            text = raw.decode("utf-8")
-        except UnicodeDecodeError:
-            text = raw.decode("latin-1")
-        result = bank_mod.import_csv_text(text, f.filename)
+        result = bank_mod.import_bank_file(f.read(), f.filename)
     except Exception as e:
         log.error("Bank import error: %s", e)
         result = {"imported": 0, "matched": 0, "skipped": 0, "already_imported": False}

@@ -1,15 +1,19 @@
 """
-Bank statement CSV import and invoice reconciliation.
+Bank statement import (CSV or Excel) and invoice reconciliation.
 
-Supports common Spanish bank export formats (Santander, CaixaBank, BBVA, Sabadell).
-Auto-matches debit transactions to invoices by amount ± €0.02 within ±7 days.
+Supports common Spanish bank export formats (Santander, CaixaBank, BBVA, Sabadell)
+in either CSV or XLSX. Auto-matches debit transactions to invoices by amount
+± €0.02 within ±7 days. Credit (positive-amount) transactions are income —
+see db.get_bank_income_for_period(), which feeds Modelo 130/100 and the P&L
+statement (reports/pnl.py).
 """
 from __future__ import annotations
 
 import csv
 import io
 import logging
-from datetime import datetime, timedelta
+import re
+from datetime import date as _date, datetime, timedelta
 
 import db
 from extractors.helpers import parse_date
@@ -53,25 +57,24 @@ def _parse_es_number(s: str) -> float | None:
         return None
 
 
-def parse_bank_csv(text: str) -> list[dict]:
-    """
-    Parse a bank statement CSV text.
-    Returns list of {date, description, amount, balance}.
-    """
-    # Normalise line endings
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    delim = _detect_delimiter(text)
+def _resolve_date(raw: str) -> str | None:
+    if not raw:
+        return None
+    # Already ISO (Excel-native date/datetime cells are pre-formatted this
+    # way before reaching here — see parse_bank_excel) — a 4-digit year up
+    # front is unambiguous vs. Spanish DD-MM-YY, so check it first.
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+        return raw
+    return parse_date(raw.replace("-", "/"))
 
-    try:
-        rows = list(csv.reader(io.StringIO(text), delimiter=delim))
-    except Exception as e:
-        log.error("CSV parse error: %s", e)
-        return []
 
+def _rows_to_transactions(rows: list[list[str]]) -> list[dict]:
+    """Shared header-detection + row-parsing logic for both CSV and Excel
+    input, once each has been normalised to a list of string rows."""
     if not rows:
         return []
 
-    # Find the header row: first row with ≥3 non-empty cells
+    # Find the header row: first row with >= 3 non-empty cells
     header_idx = 0
     for i, row in enumerate(rows):
         if sum(1 for c in row if c.strip()) >= 3:
@@ -112,8 +115,7 @@ def parse_bank_csv(text: str) -> list[dict]:
         raw_amt  = _cell(row, col["amount"])
         raw_bal  = _cell(row, col["balance"])
 
-        # Spanish banks sometimes write dates as DD-MM-YYYY or DD/MM/YYYY
-        date = parse_date(raw_date.replace("-", "/")) if raw_date else None
+        date    = _resolve_date(raw_date) if raw_date else None
         amount  = _parse_es_number(raw_amt)
         balance = _parse_es_number(raw_bal)
 
@@ -130,16 +132,65 @@ def parse_bank_csv(text: str) -> list[dict]:
     return transactions
 
 
-def import_csv_text(text: str, source_filename: str) -> dict:
+def parse_bank_csv(text: str) -> list[dict]:
+    """Parse bank statement CSV text. Returns list of {date, description, amount, balance}."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    delim = _detect_delimiter(text)
+    try:
+        rows = list(csv.reader(io.StringIO(text), delimiter=delim))
+    except Exception as e:
+        log.error("CSV parse error: %s", e)
+        return []
+    return _rows_to_transactions(rows)
+
+
+def parse_bank_excel(file_bytes: bytes) -> list[dict]:
+    """Parse bank statement XLSX bytes. Returns list of {date, description, amount, balance}."""
+    import openpyxl
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
+    except Exception as e:
+        log.error("Excel parse error: %s", e)
+        return []
+
+    try:
+        ws = wb.active
+        rows = []
+        for row in ws.iter_rows(values_only=True):
+            cells = []
+            for c in row:
+                if c is None:
+                    cells.append("")
+                elif isinstance(c, (_date, datetime)):
+                    cells.append(c.strftime("%Y-%m-%d"))
+                else:
+                    cells.append(str(c))
+            rows.append(cells)
+    finally:
+        wb.close()
+
+    return _rows_to_transactions(rows)
+
+
+def import_bank_file(data: bytes, source_filename: str) -> dict:
     """
-    Parse CSV text and insert into bank_transactions.
-    Returns {imported, matched, skipped, already_imported}.
+    Parse a bank statement (CSV or XLSX, by file extension) and insert into
+    bank_transactions. Returns {imported, matched, skipped, already_imported}.
     """
-    # Prevent duplicate file imports
     if db.bank_file_already_imported(source_filename):
         return {"imported": 0, "matched": 0, "skipped": 0, "already_imported": True}
 
-    rows = parse_bank_csv(text)
+    ext = source_filename.lower().rsplit(".", 1)[-1] if "." in source_filename else ""
+    if ext in ("xlsx", "xls"):
+        rows = parse_bank_excel(data)
+    else:
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            text = data.decode("latin-1")
+        rows = parse_bank_csv(text)
+
     if not rows:
         return {"imported": 0, "matched": 0, "skipped": 0, "already_imported": False}
 
@@ -180,7 +231,7 @@ def _find_match(tx: dict) -> int | None:
     if not amount or not date:
         return None
     if amount >= 0:
-        return None  # credit/income — skip for now
+        return None  # credit/income — handled by db.get_bank_income_for_period()
 
     target = abs(amount)
     try:
