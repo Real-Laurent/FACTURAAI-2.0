@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_invoices }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_invoices }} <small style="font-weight:400;color:#888;font-size:1rem;">({{ total_count }} {{ t.results }})</small></h1>
+
+<form class="filters" method="get" action="/">
+  <label>{{ t.filter_supplier }}
+    <input name="supplier" value="{{ filters.get('supplier','') }}" placeholder="{{ t.supplier_eg }}">
+  </label>
+  <label>{{ t.filter_from }}
+    <input type="date" name="date_from" value="{{ filters.get('date_from','') }}">
+  </label>
+  <label>{{ t.filter_to }}
+    <input type="date" name="date_to" value="{{ filters.get('date_to','') }}">
+  </label>
+  <label>{{ t.filter_min }}
+    <input type="number" step="0.01" name="amount_min" value="{{ filters.get('amount_min','') }}" placeholder="0.00">
+  </label>
+  <label>{{ t.filter_max }}
+    <input type="number" step="0.01" name="amount_max" value="{{ filters.get('amount_max','') }}">
+  </label>
+  <label style="flex-direction:row;align-items:center;gap:.4rem;">
+    <input type="checkbox" name="needs_review" value="1" {% if filters.get('needs_review') %}checked{% endif %}>
+    {{ t.filter_review_only }}
+  </label>
+  <button type="submit">{{ t.filter }}</button>
+  <a class="reset" href="/">{{ t.clear }}</a>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>{{ t.col_date }}</th>
+      <th>{{ t.col_supplier }}</th>
+      <th>{{ t.col_inv_no }}</th>
+      <th style="text-align:right">{{ t.col_net }}</th>
+      <th style="text-align:right">{{ t.col_vat }}</th>
+      <th style="text-align:right">{{ t.col_total }}</th>
+      <th>{{ t.col_currency }}</th>
+      <th>{{ t.col_source }}</th>
+      <th>{{ t.col_confidence }}</th>
+      <th>{{ t.col_status }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for inv in invoices %}
+    <tr>
+      <td>{{ inv.id }}</td>
+      <td>{{ inv.date or '—' }}</td>
+      <td>{{ inv.supplier or '—' }}</td>
+      <td style="font-family:monospace;font-size:.8rem">{{ inv.invoice_number or '—' }}</td>
+      <td style="text-align:right">{{ '%.2f'|format(inv.net_amount) if inv.net_amount is not none else '—' }}</td>
+      <td style="text-align:right">{{ '%.2f'|format(inv.vat_amount) if inv.vat_amount is not none else '—' }}</td>
+      <td style="text-align:right;font-weight:600">{{ '%.2f'|format(inv.total_amount) if inv.total_amount is not none else '—' }}</td>
+      <td>{{ inv.currency or 'EUR' }}</td>
+      <td>{{ inv.source or '—' }}</td>
+      <td>
+        {% set pct = (inv.confidence * 100)|int %}
+        <span class="badge {% if pct >= 80 %}badge-ok{% elif pct >= 60 %}badge-warn{% else %}badge-error{% endif %}">
+          {{ pct }}%
+        </span>
+      </td>
+      <td>
+        {% if inv.needs_review %}<span class="badge badge-warn">{{ t.badge_review }}</span>{% endif %}
+        {% if inv.vat_flag %}<span class="badge badge-error">{{ t.col_vat }}</span>{% endif %}
+        {% if inv.spike_flag %}<span class="badge badge-error">{{ t.badge_spike }}</span>{% endif %}
+        {% if not inv.needs_review and not inv.vat_flag and not inv.spike_flag %}
+          <span class="badge badge-ok">{{ t.badge_ok }}</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="11" style="text-align:center;color:#888;padding:2rem">{{ t.no_results }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+    <a href="?{{ args|urlencode }}&page={{ page - 1 }}">{{ t.prev_page }}</a>
+  {% endif %}
+  {% for p in range(1, total_pages + 1) %}
+    {% if p == page %}
+      <span class="current">{{ p }}</span>
+    {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+      <a href="?{{ args|urlencode }}&page={{ p }}">{{ p }}</a>
+    {% elif p == page - 3 or p == page + 3 %}
+      <span>…</span>
+    {% endif %}
+  {% endfor %}
+  {% if page < total_pages %}
+    <a href="?{{ args|urlencode }}&page={{ page + 1 }}">{{ t.next_page }}</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

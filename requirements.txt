@@ -1,0 +1,29 @@
+# PDF text extraction
+pdfplumber>=0.10.0
+
+# File system watching
+watchdog>=4.0.0
+
+# Web dashboard
+flask>=3.0.0
+
+# XLSX export
+openpyxl>=3.1.0
+
+# YAML config
+PyYAML>=6.0
+
+# OCR for scanned invoices (requires tesseract system package)
+ocrmypdf>=14.0.0
+
+# Gmail API (optional — only needed if gmail.enabled: true)
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.1.0
+
+# Claude API — factura classification, extractor codegen, plausibility review
+anthropic>=0.40.0
+
+# OneDrive / Microsoft Graph upload
+msal>=1.28.0
+requests>=2.31.0

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_monthly }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_monthly }}</h1>
+<table>
+  <thead>
+    <tr>
+      <th>{{ t.col_month }}</th>
+      <th style="text-align:right">{{ t.col_count }}</th>
+      <th style="text-align:right">{{ t.col_taxable }}</th>
+      <th style="text-align:right">{{ t.col_vat }}</th>
+      <th style="text-align:right">{{ t.col_total }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% set ns = namespace(total_net=0, total_vat=0, total_total=0, total_count=0) %}
+  {% for row in totals %}
+    {% set ns.total_net   = ns.total_net   + (row.net   or 0) %}
+    {% set ns.total_vat   = ns.total_vat   + (row.vat   or 0) %}
+    {% set ns.total_total = ns.total_total + (row.total or 0) %}
+    {% set ns.total_count = ns.total_count + (row.count or 0) %}
+    <tr>
+      <td>{{ row.month }}</td>
+      <td style="text-align:right">{{ row.count }}</td>
+      <td style="text-align:right">{{ '%.2f'|format(row.net or 0) }} €</td>
+      <td style="text-align:right">{{ '%.2f'|format(row.vat or 0) }} €</td>
+      <td style="text-align:right;font-weight:600">{{ '%.2f'|format(row.total or 0) }} €</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" style="text-align:center;color:#888;padding:2rem">{{ t.no_data }}</td></tr>
+  {% endfor %}
+  </tbody>
+  {% if totals %}
+  <tfoot>
+    <tr style="background:#f0f0f0;font-weight:700">
+      <td>{{ t.total_row }}</td>
+      <td style="text-align:right">{{ ns.total_count }}</td>
+      <td style="text-align:right">{{ '%.2f'|format(ns.total_net) }} €</td>
+      <td style="text-align:right">{{ '%.2f'|format(ns.total_vat) }} €</td>
+      <td style="text-align:right">{{ '%.2f'|format(ns.total_total) }} €</td>
+    </tr>
+  </tfoot>
+  {% endif %}
+</table>
+{% endblock %}

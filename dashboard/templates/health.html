@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_health }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_health }}</h1>
+
+<div class="stat-grid">
+  <div class="stat">
+    <div class="label">{{ t.last_heartbeat }}</div>
+    <div class="value" style="font-size:1rem">{{ last_seen or '—' }}</div>
+    <div style="font-size:.8rem;color:#888;margin-top:.2rem">{{ age }}</div>
+  </div>
+  {% if last_cycle %}
+  <div class="stat">
+    <div class="label">{{ t.files_found }}</div>
+    <div class="value">{{ last_cycle.files_found or 0 }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">{{ t.files_processed }}</div>
+    <div class="value" style="color:#0f5132">{{ last_cycle.files_processed or 0 }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">{{ t.files_failed }}</div>
+    <div class="value" style="color:{% if last_cycle.files_failed %}#842029{% else %}#0f5132{% endif %}">
+      {{ last_cycle.files_failed or 0 }}
+    </div>
+  </div>
+  <div class="stat">
+    <div class="label">{{ t.files_skipped }}</div>
+    <div class="value">{{ last_cycle.files_skipped or 0 }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">{{ t.cycle_duration }}</div>
+    <div class="value" style="font-size:1rem">{{ '%.1f'|format(last_cycle.duration_seconds or 0) }}s</div>
+  </div>
+  {% endif %}
+  <div class="stat">
+    <div class="label">{{ t.pending_review }}</div>
+    <div class="value" style="color:{% if review_count %}#856404{% else %}#0f5132{% endif %}">
+      {{ review_count }}
+    </div>
+  </div>
+</div>
+
+{% if last_cycle %}
+<div class="card">
+  <strong>{{ t.cycle_label }} #{{ last_cycle.cycle_number }}</strong> — {{ last_cycle.timestamp }}
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:2rem;border:1px solid #f5c2c7;background:#fff5f5;max-width:480px">
+  <strong style="color:#842029">{{ t.clear_all_btn }}</strong>
+  <p style="font-size:.82rem;color:#555;margin:.4rem 0 .75rem">{{ t.clear_all_confirm }}</p>
+  <button id="clearBtn" onclick="clearAll(this)"
+          style="padding:.38rem .9rem;background:#842029;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">
+    {{ t.clear_all_btn }}
+  </button>
+</div>
+
+<script>
+function clearAll(btn) {
+  if (!confirm('{{ t.clear_all_confirm }}')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/clear-all', {method: 'POST'})
+    .then(r => r.json())
+    .then(d => {
+      btn.textContent = '{{ t.clear_all_done }}';
+      btn.style.background = '#0f5132';
+      setTimeout(() => location.reload(), 1200);
+    })
+    .catch(() => { btn.disabled = false; btn.textContent = '{{ t.clear_all_btn }}'; });
+}
+</script>
+{% endblock %}

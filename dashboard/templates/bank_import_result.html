@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ t.bank_import_done }}{% endblock %}
+{% block content %}
+<h1>{{ t.bank_import_hdr }}</h1>
+<div class="card" style="max-width:480px">
+  <p style="font-size:.9rem;color:#555;margin:0 0 .75rem">
+    {{ t.file_label }}: <strong>{{ filename }}</strong>
+  </p>
+  {% if result.already_imported %}
+    <div class="badge badge-warn" style="font-size:.9rem;padding:.5rem .75rem">
+      {{ t.already_imported }}
+    </div>
+  {% elif result.imported == 0 %}
+    <div class="badge badge-error" style="font-size:.9rem;padding:.5rem .75rem">
+      {{ t.no_valid_rows }}
+    </div>
+  {% else %}
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat">
+        <div class="label">{{ t.bank_imported }}</div>
+        <div class="value">{{ result.imported }}</div>
+      </div>
+      <div class="stat">
+        <div class="label">{{ t.bank_matched }}</div>
+        <div class="value" style="color:#0f5132">{{ result.matched }}</div>
+      </div>
+      <div class="stat">
+        <div class="label">{{ t.bank_unmatched }}</div>
+        <div class="value" style="color:#856404">{{ result.imported - result.matched }}</div>
+      </div>
+    </div>
+  {% endif %}
+  <div style="margin-top:1.25rem">
+    <a href="/bank" style="padding:.38rem .9rem;background:#1a1a2e;color:#fff;border-radius:4px;font-size:.85rem;text-decoration:none">
+      {{ t.view_statement }}
+    </a>
+  </div>
+</div>
+{% endblock %}

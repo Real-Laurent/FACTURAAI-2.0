@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.db
+.venv/
+data/
+logs/
+inbox/
+output/
+manual_review/
+rejected/
+config/config.yaml
+config/gmail_credentials.json
+config/gmail_token.json
+config/onedrive_client_secret.json
+config/onedrive_token_cache.json

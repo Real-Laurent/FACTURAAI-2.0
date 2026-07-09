@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_rejected }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_rejected }} <small style="font-weight:400;color:#888;font-size:1rem;">({{ total_count }} {{ t.results }})</small></h1>
+
+{% if not rejected %}
+  <div class="card" style="color:#0f5132;background:#d1e7dd">{{ t.rejected_none }}</div>
+{% endif %}
+
+{% if rejected %}
+<table>
+  <thead>
+    <tr>
+      <th>{{ t.col_date }}</th>
+      <th>{{ t.col_reason }}</th>
+      <th>{{ t.col_source }}</th>
+      <th>File</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for inv in rejected %}
+    <tr>
+      <td>{{ inv.created_at }}</td>
+      <td>{{ inv.reject_reason }}</td>
+      <td>{{ inv.source }}</td>
+      <td><code style="font-size:.75rem;color:#666">{{ inv.file_path }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="pagination">
+  {% if page > 1 %}<a href="/rejected?page={{ page - 1 }}">{{ t.prev_page }}</a>{% endif %}
+  <span class="current">{{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}<a href="/rejected?page={{ page + 1 }}">{{ t.next_page }}</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

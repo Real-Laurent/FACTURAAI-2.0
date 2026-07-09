@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_review }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_review }} <small style="font-weight:400;color:#888;font-size:1rem;">({{ queue|length }} {{ t.inv_plural }})</small></h1>
+
+{% if not queue %}
+  <div class="card" style="color:#0f5132;background:#d1e7dd">{{ t.review_none }}</div>
+{% endif %}
+
+{% for inv in queue %}
+<div class="card" style="margin-bottom:1.5rem">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem">
+    <div>
+      <strong>#{{ inv.id }}</strong>
+      {% if inv.vat_flag %}<span class="badge badge-error" style="margin-left:.5rem">{{ t.badge_vat_err }}</span>{% endif %}
+      {% if inv.spike_flag %}<span class="badge badge-error" style="margin-left:.4rem">{{ t.badge_spike }}</span>{% endif %}
+      {% if inv.ai_flag %}<span class="badge badge-error" style="margin-left:.4rem" title="{{ inv.ai_issue or '' }}">{{ t.badge_ai_flag }}</span>{% endif %}
+      {% if inv.extractor_pending %}<span class="badge badge-warn" style="margin-left:.4rem">{{ t.badge_new_extractor }}</span>{% endif %}
+    </div>
+    <code style="font-size:.75rem;color:#666">{{ inv.file_path }}</code>
+  </div>
+  {% if inv.ai_issue %}
+  <div style="background:#f8d7da;color:#842029;border-radius:4px;padding:.5rem .8rem;font-size:.8rem;margin-bottom:.75rem">
+    {{ inv.ai_issue }}
+  </div>
+  {% endif %}
+  <form method="post" action="/review/{{ inv.id }}">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.75rem">
+      <label style="font-size:.8rem">{{ t.col_date }}
+        <input name="date" value="{{ inv.date or '' }}" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+      <label style="font-size:.8rem">{{ t.col_supplier }}
+        <input name="supplier" value="{{ inv.supplier or '' }}" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+      <label style="font-size:.8rem">{{ t.col_inv_no }}
+        <input name="invoice_number" value="{{ inv.invoice_number or '' }}" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+      <label style="font-size:.8rem">{{ t.col_taxable }}
+        <input type="number" step="0.01" name="net_amount" value="{{ inv.net_amount or '' }}" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+      <label style="font-size:.8rem">{{ t.col_vat }}
+        <input type="number" step="0.01" name="vat_amount" value="{{ inv.vat_amount or '' }}" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+      <label style="font-size:.8rem">{{ t.col_vat_rate }}
+        <input type="number" step="0.01" name="vat_rate" value="{{ inv.vat_rate or '' }}" placeholder="0.21" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+      <label style="font-size:.8rem">{{ t.col_total }}
+        <input type="number" step="0.01" name="total_amount" value="{{ inv.total_amount or '' }}" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+      <label style="font-size:.8rem">{{ t.col_currency }}
+        <input name="currency" value="{{ inv.currency or 'EUR' }}" style="width:100%;padding:.35rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem;margin-top:.2rem">
+      </label>
+    </div>
+    <button type="submit" style="margin-top:1rem;padding:.4rem 1rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">
+      {{ t.save_reviewed }}
+    </button>
+  </form>
+</div>
+{% endfor %}
+{% endblock %}

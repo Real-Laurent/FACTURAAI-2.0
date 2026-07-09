@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_bank }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_bank }}</h1>
+
+<div class="card" style="margin-bottom:1rem">
+  <strong>{{ t.bank_import_title }}</strong>
+  <p style="font-size:.82rem;color:#555;margin:.4rem 0 .75rem">{{ t.bank_compat }}</p>
+  <form method="post" action="/bank/import" enctype="multipart/form-data"
+        style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+    <input type="file" name="csv_file" accept=".csv,.txt"
+           style="border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.85rem">
+    <button type="submit"
+            style="padding:.38rem .9rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">
+      {{ t.import_btn }}
+    </button>
+  </form>
+</div>
+
+<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);max-width:600px;margin-bottom:1.25rem">
+  <div class="stat">
+    <div class="label">{{ t.bank_transactions }}</div>
+    <div class="value">{{ stats.total }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">{{ t.bank_matched }}</div>
+    <div class="value" style="color:#0f5132">{{ stats.matched }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">{{ t.bank_unmatched }}</div>
+    <div class="value" style="color:{% if stats.unmatched > 0 %}#856404{% else %}#0f5132{% endif %}">
+      {{ stats.unmatched }}
+    </div>
+  </div>
+</div>
+
+{% if stats.unmatched > 0 %}
+<div style="margin-bottom:1rem">
+  <button onclick="rematch(this)"
+          style="padding:.38rem .9rem;background:#0d6efd;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">
+    {{ t.bank_rematch }}
+  </button>
+</div>
+{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      <th>{{ t.col_date }}</th>
+      <th>{{ t.col_concept }}</th>
+      <th style="text-align:right">{{ t.col_amount }}</th>
+      <th style="text-align:right">{{ t.col_balance }}</th>
+      <th>{{ t.col_matched_inv }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for tx in transactions %}
+    <tr>
+      <td style="white-space:nowrap">{{ tx.date or '—' }}</td>
+      <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          title="{{ tx.description }}">{{ tx.description or '—' }}</td>
+      <td style="text-align:right;font-weight:600;color:{% if (tx.amount or 0) < 0 %}#842029{% else %}#0f5132{% endif %}">
+        {{ '%.2f'|format(tx.amount or 0) }} €
+      </td>
+      <td style="text-align:right;color:#888">
+        {% if tx.balance is not none %}{{ '%.2f'|format(tx.balance) }} €{% else %}—{% endif %}
+      </td>
+      <td>
+        {% if tx.matched_invoice_id %}
+          <span class="badge badge-ok">
+            ✓ {{ tx.matched_supplier or '?' }}
+            {% if tx.matched_total %}· {{ '%.2f'|format(tx.matched_total) }} €{% endif %}
+          </span>
+        {% else %}
+          <span class="badge badge-warn">{{ t.bank_unmatched }}</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr>
+      <td colspan="5" style="text-align:center;color:#888;padding:2rem">{{ t.bank_no_data }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}<a href="?page={{ page - 1 }}">{{ t.prev_page }}</a>{% endif %}
+  <span class="current">{{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}<a href="?page={{ page + 1 }}">{{ t.next_page }}</a>{% endif %}
+</div>
+{% endif %}
+
+<script>
+function rematch(btn) {
+  btn.disabled = true;
+  btn.textContent = '{{ t.processing }}';
+  fetch('/bank/rematch', {method:'POST'})
+    .then(r => r.json())
+    .then(() => location.reload())
+    .catch(() => { btn.disabled = false; btn.textContent = '{{ t.bank_rematch }}'; });
+}
+</script>
+{% endblock %}

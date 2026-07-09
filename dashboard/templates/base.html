@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FacturaAI – {% block title %}{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f5f5f5; color: #222; }
+    nav { background: #1a1a2e; color: #eee; padding: .75rem 1.5rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
+    nav a { color: #ccc; text-decoration: none; font-size: .9rem; }
+    nav a:hover { color: #fff; }
+    nav .brand { font-weight: 700; font-size: 1.1rem; color: #fff; margin-right: auto; }
+    nav .lang-switcher { display: flex; gap: .3rem; align-items: center; border-left: 1px solid #333; padding-left: 1rem; margin-left: .25rem; }
+    nav .lang-switcher a { font-size: .8rem; padding: .15rem .35rem; border-radius: 3px; }
+    nav .lang-switcher a.active { color: #fff; font-weight: 700; background: rgba(255,255,255,.12); }
+    nav .lang-switcher a:not(.active) { color: #777; }
+    main { max-width: 1400px; margin: 1.5rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.4rem; margin: 0 0 1rem; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    th, td { padding: .55rem .8rem; text-align: left; font-size: .85rem; border-bottom: 1px solid #eee; }
+    th { background: #f0f0f0; font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .badge { display: inline-block; padding: .2rem .5rem; border-radius: 3px; font-size: .75rem; font-weight: 600; }
+    .badge-warn  { background: #fff3cd; color: #856404; }
+    .badge-ok    { background: #d1e7dd; color: #0f5132; }
+    .badge-error { background: #f8d7da; color: #842029; }
+    .pagination { display: flex; gap: .4rem; margin-top: 1rem; }
+    .pagination a, .pagination span { padding: .35rem .7rem; border: 1px solid #ddd; border-radius: 4px; font-size: .85rem; text-decoration: none; color: #333; background: #fff; }
+    .pagination .current { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+    .filters { background: #fff; padding: .8rem 1rem; border-radius: 6px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; gap: .6rem; flex-wrap: wrap; align-items: flex-end; }
+    .filters label { font-size: .8rem; color: #555; display: flex; flex-direction: column; gap: .2rem; }
+    .filters input, .filters select { padding: .35rem .5rem; border: 1px solid #ccc; border-radius: 4px; font-size: .85rem; }
+    .filters button { padding: .38rem .9rem; background: #1a1a2e; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: .85rem; }
+    .filters a.reset { font-size: .8rem; color: #888; align-self: center; }
+    .card { background: #fff; border-radius: 6px; padding: 1rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 1rem; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat { background: #fff; border-radius: 6px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .stat .label { font-size: .75rem; color: #888; text-transform: uppercase; letter-spacing: .04em; }
+    .stat .value { font-size: 1.6rem; font-weight: 700; margin-top: .2rem; }
+  </style>
+</head>
+<body>
+<nav>
+  <span class="brand">FacturaAI</span>
+  <a href="/">{{ t.nav_invoices }}</a>
+  <a href="/monthly">{{ t.nav_monthly }}</a>
+  <a href="/categories">{{ t.nav_categories }}</a>
+  <a href="/reports/303">{{ t.nav_303 }}</a>
+  <a href="/reports/390">{{ t.nav_390 }}</a>
+  <a href="/reports/130">{{ t.nav_130 }}</a>
+  <a href="/reports/100">{{ t.nav_100 }}</a>
+  <a href="/bank">{{ t.nav_bank }}</a>
+  <a href="/review">{{ t.nav_review }}</a>
+  <a href="/rejected">{{ t.nav_rejected }}</a>
+  <a href="/health">{{ t.nav_health }}</a>
+  <div class="lang-switcher">
+    {% for code, label in LANGUAGES.items() %}
+      <a href="/lang/{{ code }}" class="{{ 'active' if lang == code else '' }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</nav>
+<main>
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

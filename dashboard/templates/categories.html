@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_categories }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_categories }}</h1>
+
+<form method="get" style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:1.25rem">
+  <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+    {{ t.year }}
+    <select name="year" style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem">
+      <option value="">{{ t.all_years }}</option>
+      {% for y in years %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" style="padding:.38rem .9rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">{{ t.filter }}</button>
+</form>
+
+<div class="stat-grid">
+  {% for row in totals %}
+  <div class="stat">
+    <div class="label">{{ row.label }}</div>
+    <div class="value" style="font-size:1.25rem">{{ '%.0f'|format(row.total or 0) }} €</div>
+    <div style="font-size:.75rem;color:#888;margin-top:.2rem">
+      {{ row.count }} {{ t.inv_singular if row.count == 1 else t.inv_plural }}
+    </div>
+  </div>
+  {% else %}
+  <p style="color:#888">{{ t.no_data }}</p>
+  {% endfor %}
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>{{ t.col_category }}</th>
+      <th style="text-align:right">{{ t.col_count }}</th>
+      <th style="text-align:right">{{ t.col_taxable }}</th>
+      <th style="text-align:right">{{ t.col_vat }}</th>
+      <th style="text-align:right">{{ t.col_total }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% set ns = namespace(tnet=0, tvat=0, ttotal=0, tcount=0) %}
+  {% for row in totals %}
+    {% set ns.tnet   = ns.tnet   + (row.net   or 0) %}
+    {% set ns.tvat   = ns.tvat   + (row.vat   or 0) %}
+    {% set ns.ttotal = ns.ttotal + (row.total or 0) %}
+    {% set ns.tcount = ns.tcount + (row.count or 0) %}
+    <tr>
+      <td>{{ row.label }}</td>
+      <td style="text-align:right">{{ row.count }}</td>
+      <td style="text-align:right">{{ '%.2f'|format(row.net or 0) }} €</td>
+      <td style="text-align:right">{{ '%.2f'|format(row.vat or 0) }} €</td>
+      <td style="text-align:right;font-weight:600">{{ '%.2f'|format(row.total or 0) }} €</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" style="text-align:center;color:#888;padding:2rem">{{ t.no_data }}</td></tr>
+  {% endfor %}
+  </tbody>
+  {% if totals %}
+  <tfoot>
+    <tr style="background:#f0f0f0;font-weight:700">
+      <td>{{ t.total_row }}</td>
+      <td style="text-align:right">{{ ns.tcount }}</td>
+      <td style="text-align:right">{{ '%.2f'|format(ns.tnet) }} €</td>
+      <td style="text-align:right">{{ '%.2f'|format(ns.tvat) }} €</td>
+      <td style="text-align:right">{{ '%.2f'|format(ns.ttotal) }} €</td>
+    </tr>
+  </tfoot>
+  {% endif %}
+</table>
+{% endblock %}

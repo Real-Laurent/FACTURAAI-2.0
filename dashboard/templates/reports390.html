@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ t.page_390 }}{% endblock %}
+{% block content %}
+<h1>{{ t.page_390 }}</h1>
+
+<form method="get" style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:1.25rem;flex-wrap:wrap">
+  <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+    {{ t.year }}
+    <select name="year" style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem">
+      {% for y in years %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" style="padding:.38rem .9rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">{{ t.view }}</button>
+  <a href="/reports/390/export?year={{ selected_year }}"
+     style="padding:.38rem .9rem;background:#198754;color:#fff;border-radius:4px;font-size:.85rem;text-decoration:none">
+    {{ t.export_csv }}
+  </a>
+</form>
+
+<div class="card" style="max-width:800px">
+
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1.25rem;border-bottom:2px solid #1a1a2e;padding-bottom:.5rem">
+    <strong style="font-size:1.1rem">{{ t.fiscal_year }} {{ report.periodo }}</strong>
+    <span class="badge badge-ok">
+      {{ report.invoice_count }} {{ t.inv_singular if report.invoice_count == 1 else t.inv_plural }}
+    </span>
+  </div>
+
+  <h2 style="font-size:.95rem;color:#888;margin:.5rem 0 .4rem">{{ t.vat_output_title }}</h2>
+  <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:4px;padding:.6rem .9rem;font-size:.85rem;color:#795548;margin-bottom:1.25rem">
+    {{ t.sec1_pending }}
+  </div>
+
+  <h2 style="font-size:.95rem;margin:.5rem 0 .4rem">{{ t.vat_input_title }}</h2>
+  <table style="margin-bottom:.25rem">
+    <thead>
+      <tr>
+        <th>{{ t.col_rate }}</th>
+        <th style="text-align:right">{{ t.col_taxable }}</th>
+        <th style="text-align:right">{{ t.col_vat_amount }}</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for rate_str, vals in report.iva_soportado.items() %}
+      <tr>
+        <td>{{ rate_str }}%</td>
+        <td style="text-align:right">{{ '%.2f'|format(vals.base) }} €</td>
+        <td style="text-align:right">{{ '%.2f'|format(vals.cuota) }} €</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="3" style="text-align:center;color:#888;padding:1rem">{{ t.no_data_year }}</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr style="background:#f0f0f0;font-weight:700">
+        <td>{{ t.total_input_vat }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.total_base_soportado) }} €</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.total_soportado) }} €</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <h2 style="font-size:.95rem;margin:1.25rem 0 .4rem">{{ t.annual_result_hdr }}</h2>
+  <table>
+    <tbody>
+      <tr>
+        <td>{{ t.total_output_row }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.total_repercutido) }} €</td>
+      </tr>
+      <tr>
+        <td>{{ t.total_input_row }}</td>
+        <td style="text-align:right">{{ '%.2f'|format(report.total_soportado) }} €</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr style="background:#f0f0f0;font-weight:700">
+        <td>
+          {{ t.annual_result_lbl }}
+          {% if report.resultado < 0 %}
+            <span class="badge badge-ok" style="margin-left:.5rem">{{ t.to_offset }}</span>
+          {% elif report.resultado > 0 %}
+            <span class="badge badge-error" style="margin-left:.5rem">{{ t.to_pay }}</span>
+          {% endif %}
+        </td>
+        <td style="text-align:right;font-size:1.1rem">{{ '%.2f'|format(report.resultado) }} €</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <p style="font-size:.78rem;color:#aaa;margin-top:1rem">{{ t.draft_notice }}</p>
+</div>
+{% endblock %}

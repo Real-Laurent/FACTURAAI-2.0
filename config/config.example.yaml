@@ -1,0 +1,71 @@
+paths:
+  base: ~/FacturaAI
+  inbox_scan: ~/FacturaAI/inbox/scan
+  inbox_gmail: ~/FacturaAI/inbox/gmail
+  output: ~/FacturaAI/output
+  manual_review: ~/FacturaAI/manual_review
+  rejected: ~/FacturaAI/rejected
+  logs: ~/FacturaAI/logs
+  db: ~/FacturaAI/data/facturas.db
+  exports: ~/FacturaAI/data
+
+gmail:
+  enabled: false
+  credentials_file: ~/FacturaAI/config/gmail_credentials.json
+  token_file: ~/FacturaAI/config/gmail_token.json
+  poll_interval_minutes: 10
+  label_filter: "invoice"
+  mark_as_read: true
+
+processing:
+  ocr_enabled: true
+  ocr_language: spa+eng
+  confidence_threshold: 0.6
+  pdf_text_min_chars: 50
+  # Windows: set to the folder containing tesseract.exe (e.g. E:\Tesseract)
+  # macOS/Linux: leave blank — tesseract is found via PATH from brew/apt
+  ocr_tesseract_dir: ""
+  ocr_tessdata_prefix: ""
+  # local | onedrive | both — where archived invoices end up
+  output_destination: local
+
+ai:
+  enabled: true
+  # ANTHROPIC_API_KEY is read from the environment, never stored here
+  classifier_model: claude-haiku-4-5
+  codegen_model: claude-opus-4-8
+  plausibility_model: claude-haiku-4-5
+  # Skip the manual_review checkpoint for newly generated extractors once
+  # they pass the self-test. Leave false until you trust the pipeline.
+  auto_trust_new_extractors: false
+
+onedrive:
+  enabled: false
+  client_id: ""
+  tenant_id: ""
+  client_secret_file: ~/FacturaAI/config/onedrive_client_secret.json
+  token_cache_file: ~/FacturaAI/config/onedrive_token_cache.json
+  # Root folder in OneDrive under which YYYY/MM/ archives are created
+  root_folder: "FacturaAI"
+
+sanity:
+  vat_rates: [0.04, 0.10, 0.21]
+  vat_tolerance: 0.02
+  monthly_spike_multiplier: 3.0
+
+dashboard:
+  host: "127.0.0.1"
+  port: 5000
+  debug: false
+  page_size: 50
+
+exports:
+  auto_export: true
+  formats:
+    - csv
+    - xlsx
+
+logging:
+  level: INFO
+  max_bytes: 10485760
+  backup_count: 5
