@@ -69,6 +69,13 @@ def detect(text: str) -> DetectionResult:
             reasoning="ai.enabled is false; no existing extractor matched",
         )
 
+    if not text.strip():
+        log.warning("No text extracted (digital or OCR) — routing to manual_review")
+        return DetectionResult(
+            outcome=DetectionOutcome.CLASSIFICATION_FAILED,
+            reasoning="no text could be extracted from the PDF (OCR unavailable or failed)",
+        )
+
     try:
         result = ai_client.classify_invoice(text)
     except Exception as e:

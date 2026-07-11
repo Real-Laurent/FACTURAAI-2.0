@@ -94,7 +94,6 @@ def classify_invoice(text: str) -> ClassificationResult:
         max_tokens=512,
         system=CLASSIFY_SYSTEM,
         output_config={
-            "effort": "low",
             "format": {"type": "json_schema", "schema": CLASSIFY_SCHEMA},
         },
         messages=[{"role": "user", "content": text[:15000]}],
@@ -280,7 +279,6 @@ def review_plausibility(text: str, extraction: dict) -> PlausibilityResult:
         max_tokens=512,
         system=PLAUSIBILITY_SYSTEM,
         output_config={
-            "effort": "low",
             "format": {"type": "json_schema", "schema": PLAUSIBILITY_SCHEMA},
         },
         messages=[{"role": "user", "content": user_content}],
