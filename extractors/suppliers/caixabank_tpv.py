@@ -3,7 +3,7 @@ CaixaBank TPV card payment slips  —  NOT supplier invoices.
 Merchant IDs seen: 367616810, terminal 01308876.
 
 These are card terminal receipts with no VAT breakdown.
-Returning confidence=0 routes them to manual review without processing.
+not_invoice=True routes them straight to rejected/, no manual review.
 """
 
 import re
@@ -17,5 +17,5 @@ class CaixaBankTpvExtractor(BaseExtractor):
         return bool(re.search(r'367616810|01308876', text))
 
     def extract(self, text: str) -> ExtractionResult:
-        # TPV receipts are not invoices — force manual review
-        return ExtractionResult(confidence=0.0)
+        # TPV receipts are not invoices — reject outright, no manual review needed
+        return ExtractionResult(confidence=0.0, not_invoice=True)

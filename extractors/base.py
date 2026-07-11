@@ -32,6 +32,10 @@ class ExtractionResult:
     currency: str = "EUR"
     confidence: float = 0.0
     raw_fields: dict = field(default_factory=dict)
+    # Set by an extractor that positively recognises the document as NOT an
+    # invoice (e.g. a card-terminal settlement slip) — routes straight to
+    # rejected/ instead of manual_review, skipping the AI plausibility call.
+    not_invoice: bool = False
 
     def compute_confidence(self) -> float:
         extracted = sum(

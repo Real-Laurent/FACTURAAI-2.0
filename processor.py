@@ -80,6 +80,10 @@ def process_pdf(pdf_path: str, source: str = "scan") -> ProcessingResult:
 
     extraction, extractor_name, extractor_pending, detect_reason = _extract(text, detection, cfg)
 
+    if extraction.not_invoice:
+        reason = f"{extractor_name}: recognised as a non-invoice document (not_invoice)"
+        return _reject(pdf_path, file_hash, source, reason, result)
+
     threshold = cfg.get("processing", {}).get("confidence_threshold", 0.6)
     needs_review = extraction.confidence < threshold
     review_reasons = [detect_reason] if detect_reason else []
