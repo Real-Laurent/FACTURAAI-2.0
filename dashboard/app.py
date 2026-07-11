@@ -9,6 +9,7 @@ import bank as bank_mod
 import db
 from categories import CATEGORY_LABELS, label as cat_label
 from config.loader import get_config
+from dashboard import gmail_job
 from i18n import get_translations, LANGUAGES
 from reports import modelo100, modelo130, modelo303, modelo390, pnl as pnl_mod
 
@@ -140,6 +141,7 @@ def health():
         age=_heartbeat_age(last_seen),
         last_cycle=last_cycle,
         review_count=review_count,
+        gmail_enabled=bool(get_config().get("gmail", {}).get("enabled", False)),
     )
 
 
@@ -153,6 +155,22 @@ def api_health():
         "last_cycle": dict(last_cycle),
         "review_count": len(db.get_review_queue()),
     })
+
+
+@app.route("/gmail/backfill", methods=["POST"])
+def gmail_backfill_start():
+    if not get_config().get("gmail", {}).get("enabled", False):
+        return jsonify({"ok": False, "error": "gmail_disabled"}), 400
+    since = request.form.get("since") or None
+    until = request.form.get("until") or None
+    result = gmail_job.start(since, until)
+    status_code = 200 if result.get("ok") else 409
+    return jsonify(result), status_code
+
+
+@app.route("/gmail/backfill/status")
+def gmail_backfill_status():
+    return jsonify(gmail_job.get_status())
 
 
 @app.route("/clear-all", methods=["POST"])

@@ -5,7 +5,10 @@ the monitored Gmail mailbox (not just new/unprocessed mail) through the
 same pipeline steady-state processing uses.
 
 Usage:
-    python scripts/backfill_gmail.py [--since YYYY-MM-DD]
+    python scripts/backfill_gmail.py [--since YYYY-MM-DD] [--until YYYY-MM-DD]
+
+Also runnable from the dashboard's Status page ("Check Gmail" button) for
+an ad-hoc date-range check without a terminal — see dashboard/gmail_job.py.
 
 Resumable for free: processor.process_pdf() dedupes by content hash, so if
 this is interrupted (closed terminal, network drop), re-running it just
@@ -60,7 +63,16 @@ def _iter_all_message_ids(service, query: str) -> list[str]:
     return ids
 
 
-def run_backfill(since: str | None = None) -> None:
+def run_backfill(
+    since: str | None = None,
+    until: str | None = None,
+    progress_cb=None,
+) -> dict:
+    """Run the backfill for an optional [since, until) date window.
+
+    progress_cb, if given, is called as progress_cb(i, total, filename, status)
+    after every processed message — used by the dashboard's "Check Gmail"
+    button to report live progress. Returns the final counts dict."""
     load_config()
     ensure_dirs()
     db.init_db()
@@ -68,7 +80,7 @@ def run_backfill(since: str | None = None) -> None:
     cfg = get_config()
     if not cfg.get("gmail", {}).get("enabled", False):
         print("gmail.enabled is false in config — nothing to do.")
-        return
+        return {"error": "gmail.enabled is false in config"}
 
     dest_dir = cfg["paths"]["inbox_gmail"]
     os.makedirs(dest_dir, exist_ok=True)
@@ -80,6 +92,8 @@ def run_backfill(since: str | None = None) -> None:
     query = "has:attachment filename:pdf"
     if since:
         query += f" after:{since.replace('-', '/')}"
+    if until:
+        query += f" before:{until.replace('-', '/')}"
 
     print(f"Searching Gmail: {query!r} ...")
     message_ids = _iter_all_message_ids(service, query)
@@ -95,10 +109,14 @@ def run_backfill(since: str | None = None) -> None:
             log.error("Failed to download attachments for message %s: %s", msg_id, e)
             print(f"[{i}/{total}] message {msg_id} -> download failed: {e}")
             failed += 1
+            if progress_cb:
+                progress_cb(i, total, f"message {msg_id}", f"download failed: {e}")
             continue
 
         if not paths:
             print(f"[{i}/{total}] message {msg_id} -> no PDF attachment found")
+            if progress_cb:
+                progress_cb(i, total, f"message {msg_id}", "no PDF attachment found")
             continue
 
         for path in paths:
@@ -121,21 +139,30 @@ def run_backfill(since: str | None = None) -> None:
                 failed += 1
                 status = f"FAILED ({result.reason})"
             print(f"[{i}/{total}] {filename} -> {status}")
+            if progress_cb:
+                progress_cb(i, total, filename, status)
 
+    counts = {
+        "total": total, "archived": archived, "pending_review": pending_review,
+        "rejected": rejected, "skipped": skipped, "failed": failed,
+    }
     print(
         f"\nDone. archived={archived} pending_review={pending_review} "
         f"rejected={rejected} skipped={skipped} failed={failed}"
     )
+    return counts
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--since", metavar="YYYY-MM-DD", default=None,
                          help="Only fetch mail on/after this date")
+    parser.add_argument("--until", metavar="YYYY-MM-DD", default=None,
+                         help="Only fetch mail before this date")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s")
-    run_backfill(since=args.since)
+    run_backfill(since=args.since, until=args.until)
 
 
 if __name__ == "__main__":

@@ -119,6 +119,23 @@ _T: dict[str, dict[str, str]] = {
     "pending_review":    {"es": "Pendientes revisión","en": "Pending review","zh": "待审核"},
     "cycle_label":       {"es": "Ciclo",              "en": "Cycle",        "zh": "周期"},
 
+    "gmail_check_title": {"es": "Revisar Gmail",      "en": "Check Gmail",   "zh": "检查 Gmail"},
+    "gmail_check_desc":  {"es": "Busca facturas en Gmail dentro de un rango de fechas concreto. Déjalo en blanco para no limitar ese extremo.",
+                          "en": "Search Gmail for invoices within a specific date range. Leave a field blank to not limit that end.",
+                          "zh": "在指定日期范围内搜索 Gmail 中的发票。留空表示不限制该端。"},
+    "gmail_check_from":  {"es": "Desde",              "en": "From",          "zh": "起始日期"},
+    "gmail_check_to":    {"es": "Hasta",              "en": "To",            "zh": "结束日期"},
+    "gmail_check_btn":   {"es": "Revisar Gmail",      "en": "Check Gmail",   "zh": "检查 Gmail"},
+    "gmail_check_running": {"es": "Ejecutando…",      "en": "Running…",      "zh": "正在运行…"},
+    "gmail_check_disabled": {"es": "Gmail está desactivado en config.yaml.",
+                          "en": "Gmail is disabled in config.yaml.",
+                          "zh": "Gmail 在 config.yaml 中已禁用。"},
+    "gmail_check_busy":  {"es": "Ya hay una revisión de Gmail en curso.",
+                          "en": "A Gmail check is already running.",
+                          "zh": "已有一个 Gmail 检查正在运行。"},
+    "gmail_check_done":  {"es": "Completado",         "en": "Done",          "zh": "已完成"},
+    "gmail_check_error": {"es": "Error",              "en": "Error",         "zh": "错误"},
+
     # ── Categories ────────────────────────────────────────────────────────────
     "page_categories":   {"es": "Gastos por Categoría","en": "Expenses by Category","zh": "按分类费用"},
 

@@ -47,6 +47,110 @@
 </div>
 {% endif %}
 
+<div class="card" style="margin-top:2rem;max-width:480px">
+  <strong>{{ t.gmail_check_title }}</strong>
+  <p style="font-size:.82rem;color:#555;margin:.4rem 0 .75rem">{{ t.gmail_check_desc }}</p>
+
+  {% if gmail_enabled %}
+  <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:.75rem">
+    <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+      {{ t.gmail_check_from }}
+      <input type="date" id="gmailSince" style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem">
+    </label>
+    <label style="font-size:.8rem;color:#555;display:flex;flex-direction:column;gap:.2rem">
+      {{ t.gmail_check_to }}
+      <input type="date" id="gmailUntil" style="padding:.35rem .5rem;border:1px solid #ccc;border-radius:4px;font-size:.85rem">
+    </label>
+    <button id="gmailCheckBtn" onclick="startGmailCheck()"
+            style="padding:.38rem .9rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">
+      {{ t.gmail_check_btn }}
+    </button>
+  </div>
+  <div id="gmailCheckStatus" style="font-size:.82rem;color:#555"></div>
+  {% else %}
+  <p style="font-size:.82rem;color:#888">{{ t.gmail_check_disabled }}</p>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  const t = {
+    running: {{ t.gmail_check_running|tojson }},
+    busy:    {{ t.gmail_check_busy|tojson }},
+    done:    {{ t.gmail_check_done|tojson }},
+    error:   {{ t.gmail_check_error|tojson }},
+  };
+  let pollTimer = null;
+
+  window.startGmailCheck = function () {
+    const btn = document.getElementById('gmailCheckBtn');
+    const since = document.getElementById('gmailSince').value;
+    const until = document.getElementById('gmailUntil').value;
+    btn.disabled = true;
+
+    const body = new URLSearchParams();
+    if (since) body.set('since', since);
+    if (until) body.set('until', until);
+
+    fetch('/gmail/backfill', { method: 'POST', body })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok || !d.ok) {
+          setStatus(d.error === 'already_running' ? t.busy : (d.error || t.error), true);
+          btn.disabled = false;
+          return;
+        }
+        poll();
+      })
+      .catch(() => { btn.disabled = false; });
+  };
+
+  function poll() {
+    fetch('/gmail/backfill/status')
+      .then(r => r.json())
+      .then(renderStatus)
+      .catch(() => {});
+  }
+
+  function renderStatus(s) {
+    const btn = document.getElementById('gmailCheckBtn');
+    clearTimeout(pollTimer);
+
+    if (s.running) {
+      btn.disabled = true;
+      const progress = s.total ? `${s.current}/${s.total}` : '…';
+      setStatus(`${t.running} (${progress}) ${s.last_message || ''}`.trim());
+      pollTimer = setTimeout(poll, 1500);
+      return;
+    }
+
+    btn.disabled = false;
+    if (s.error) {
+      setStatus(`${t.error}: ${s.error}`, true);
+    } else if (s.counts) {
+      const c = s.counts;
+      setStatus(`${t.done} — archived=${c.archived} pending_review=${c.pending_review} `
+               + `rejected=${c.rejected} skipped=${c.skipped} failed=${c.failed}`);
+    }
+  }
+
+  function setStatus(msg, isError) {
+    const el = document.getElementById('gmailCheckStatus');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isError ? '#842029' : '#555';
+  }
+
+  // Resume polling if a check was already running when this page loaded
+  {% if gmail_enabled %}
+  fetch('/gmail/backfill/status')
+    .then(r => r.json())
+    .then(s => { if (s.running) renderStatus(s); })
+    .catch(() => {});
+  {% endif %}
+})();
+</script>
+
 <div class="card" style="margin-top:2rem;border:1px solid #f5c2c7;background:#fff5f5;max-width:480px">
   <strong style="color:#842029">{{ t.clear_all_btn }}</strong>
   <p style="font-size:.82rem;color:#555;margin:.4rem 0 .75rem">{{ t.clear_all_confirm }}</p>

@@ -106,6 +106,7 @@ If you have invoices already sitting in the mailbox from before FacturaAI:
 ```bash
 python scripts/backfill_gmail.py                  # everything
 python scripts/backfill_gmail.py --since 2024-01-01
+python scripts/backfill_gmail.py --since 2024-01-01 --until 2024-03-01
 ```
 
 Pulls every PDF attachment in the mailbox (not just "unprocessed" mail),
@@ -114,6 +115,12 @@ Not every PDF attachment will turn out to be an invoice — the classifier
 sorts that out, and the `rejected/` folder ending up non-empty afterward is
 expected, not a bug. Safe to interrupt and re-run; already-archived
 invoices are skipped automatically.
+
+Same thing without a terminal: on the dashboard's **Status** page there's a
+"Check Gmail" button with From/To date fields — runs the same backfill in
+the background and shows live progress. Only one check can run at a time
+(dashboard or terminal); starting a second while one is in flight is
+rejected rather than queued.
 
 ## 7 — Manual run / dashboard
 
