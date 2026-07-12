@@ -87,7 +87,11 @@ def _get_token() -> str:
         result = app.acquire_token_silent(GRAPH_SCOPES, account=accounts[0])
     if not result:
         log.info("No cached OneDrive token — opening browser for one-time sign-in")
-        result = app.acquire_token_interactive(scopes=GRAPH_SCOPES)
+        # Cap the wait for the browser consent flow — this runs synchronously
+        # inside process_pdf() for every archived invoice, so an incomplete
+        # sign-in must not hang the whole processing cycle indefinitely
+        # (same failure mode as the Gmail OAuth flow — see gmail_poller.py).
+        result = app.acquire_token_interactive(scopes=GRAPH_SCOPES, timeout=120)
     _save_cache()
     if not result or "access_token" not in result:
         raise RuntimeError(f"OneDrive auth failed: {(result or {}).get('error_description', result)}")
