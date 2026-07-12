@@ -9,7 +9,7 @@ import bank as bank_mod
 import db
 from categories import CATEGORY_LABELS, label as cat_label
 from config.loader import get_config
-from dashboard import gmail_job
+from dashboard import gmail_job, reprocess_job
 from i18n import get_translations, LANGUAGES
 from reports import modelo100, modelo130, modelo303, modelo390, pnl as pnl_mod
 
@@ -95,6 +95,8 @@ def monthly():
 @app.route("/review")
 def review():
     queue = db.get_review_queue()
+    for inv in queue:
+        inv["file_name"] = os.path.basename(inv.get("file_path") or "")
     return render_template("review.html", queue=queue)
 
 
@@ -115,6 +117,19 @@ def update_review(invoice_id):
     fields["needs_review"] = 0
     db.update_invoice(invoice_id, fields)
     return redirect(url_for("review"))
+
+
+@app.route("/manual-review/reprocess", methods=["POST"])
+def manual_review_reprocess_start():
+    single_file = request.form.get("file") or None
+    result = reprocess_job.start(single_file)
+    status_code = 200 if result.get("ok") else 409
+    return jsonify(result), status_code
+
+
+@app.route("/manual-review/reprocess/status")
+def manual_review_reprocess_status():
+    return jsonify(reprocess_job.get_status())
 
 
 @app.route("/rejected")

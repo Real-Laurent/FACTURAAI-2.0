@@ -129,6 +129,33 @@ def is_duplicate(file_hash: str) -> bool:
     return row is not None
 
 
+def get_invoice_by_hash(file_hash: str) -> dict | None:
+    with transaction() as conn:
+        row = conn.execute("SELECT * FROM invoices WHERE hash = ?", (file_hash,)).fetchone()
+    return dict(row) if row else None
+
+
+def delete_invoice_by_hash(file_hash: str) -> int:
+    """Delete the invoice row for this file hash, if any — used to let a
+    file be reprocessed despite the hash-based dedup check in is_duplicate().
+    Returns the number of rows deleted (0 or 1, hash is UNIQUE)."""
+    with transaction() as conn:
+        cur = conn.execute("DELETE FROM invoices WHERE hash = ?", (file_hash,))
+        return cur.rowcount
+
+
+def bump_retry(file_hash: str, retry_count: int) -> None:
+    """Stamp retry_count/last_retried_at onto whichever row currently has
+    this hash — called after a reprocess attempt so the dashboard can show
+    a file was retried, not just left untouched since its first pass."""
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    with transaction() as conn:
+        conn.execute(
+            "UPDATE invoices SET retry_count = ?, last_retried_at = ? WHERE hash = ?",
+            (retry_count, now, file_hash),
+        )
+
+
 def migrate_db():
     """Add columns introduced after the initial schema (safe to re-run)."""
     with transaction() as conn:
@@ -150,6 +177,10 @@ def migrate_db():
             conn.execute("ALTER TABLE invoices ADD COLUMN reject_reason TEXT")
         if "extractor_pending" not in existing:
             conn.execute("ALTER TABLE invoices ADD COLUMN extractor_pending INTEGER DEFAULT 0")
+        if "retry_count" not in existing:
+            conn.execute("ALTER TABLE invoices ADD COLUMN retry_count INTEGER DEFAULT 0")
+        if "last_retried_at" not in existing:
+            conn.execute("ALTER TABLE invoices ADD COLUMN last_retried_at TEXT")
 
 
 def insert_invoice(record: dict) -> int:

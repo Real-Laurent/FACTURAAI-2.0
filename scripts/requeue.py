@@ -70,9 +70,7 @@ def main() -> None:
     requeued = 0
     for p in matches:
         file_hash = db.hash_file(str(p))
-        with db.transaction() as conn:
-            cur = conn.execute("DELETE FROM invoices WHERE hash = ?", (file_hash,))
-            deleted = cur.rowcount
+        deleted = db.delete_invoice_by_hash(file_hash)
 
         dest = scan_dir / p.name
         i = 1

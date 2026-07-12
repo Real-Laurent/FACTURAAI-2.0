@@ -3,6 +3,16 @@
 {% block content %}
 <h1>{{ t.page_review }} <small style="font-weight:400;color:#888;font-size:1rem;">({{ queue|length }} {{ t.inv_plural }})</small></h1>
 
+{% if queue %}
+<div class="card" style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
+  <button id="reprocessAllBtn" onclick="startReprocess()"
+          style="padding:.4rem 1rem;background:#1a1a2e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:.85rem">
+    {{ t.reprocess_all_btn }}
+  </button>
+  <span id="reprocessStatus" style="font-size:.82rem;color:#555"></span>
+</div>
+{% endif %}
+
 {% if not queue %}
   <div class="card" style="color:#0f5132;background:#d1e7dd">{{ t.review_none }}</div>
 {% endif %}
@@ -16,8 +26,15 @@
       {% if inv.spike_flag %}<span class="badge badge-error" style="margin-left:.4rem">{{ t.badge_spike }}</span>{% endif %}
       {% if inv.ai_flag %}<span class="badge badge-error" style="margin-left:.4rem" title="{{ inv.ai_issue or '' }}">{{ t.badge_ai_flag }}</span>{% endif %}
       {% if inv.extractor_pending %}<span class="badge badge-warn" style="margin-left:.4rem">{{ t.badge_new_extractor }}</span>{% endif %}
+      {% if inv.retry_count %}<span class="badge badge-warn" style="margin-left:.4rem" title="{{ inv.last_retried_at or '' }}">{{ t.retried_label }} ×{{ inv.retry_count }}</span>{% endif %}
     </div>
-    <code style="font-size:.75rem;color:#666">{{ inv.file_path }}</code>
+    <div style="display:flex;align-items:center;gap:.6rem">
+      <code style="font-size:.75rem;color:#666">{{ inv.file_path }}</code>
+      <button type="button" class="reprocess-one-btn" onclick="startReprocess({{ inv.file_name|tojson }})"
+              style="padding:.25rem .6rem;background:#fff;color:#1a1a2e;border:1px solid #1a1a2e;border-radius:4px;cursor:pointer;font-size:.75rem;white-space:nowrap">
+        {{ t.reprocess_btn }}
+      </button>
+    </div>
   </div>
   {% if inv.ai_issue %}
   <div style="background:#f8d7da;color:#842029;border-radius:4px;padding:.5rem .8rem;font-size:.8rem;margin-bottom:.75rem">
@@ -57,4 +74,81 @@
   </form>
 </div>
 {% endfor %}
+
+{% if queue %}
+<script>
+(function () {
+  const t = {
+    running: {{ t.reprocess_running|tojson }},
+    busy:    {{ t.reprocess_busy|tojson }},
+    done:    {{ t.reprocess_done|tojson }},
+    error:   {{ t.reprocess_error|tojson }},
+  };
+  let pollTimer = null;
+
+  window.startReprocess = function (fileName) {
+    document.querySelectorAll('#reprocessAllBtn, .reprocess-one-btn').forEach(b => b.disabled = true);
+
+    const body = new URLSearchParams();
+    if (fileName) body.set('file', fileName);
+
+    fetch('/manual-review/reprocess', { method: 'POST', body })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok || !d.ok) {
+          setStatus(d.error === 'already_running' ? t.busy : (d.error || t.error), true);
+          document.querySelectorAll('#reprocessAllBtn, .reprocess-one-btn').forEach(b => b.disabled = false);
+          return;
+        }
+        poll();
+      })
+      .catch(() => {
+        document.querySelectorAll('#reprocessAllBtn, .reprocess-one-btn').forEach(b => b.disabled = false);
+      });
+  };
+
+  function poll() {
+    fetch('/manual-review/reprocess/status')
+      .then(r => r.json())
+      .then(renderStatus)
+      .catch(() => {});
+  }
+
+  function renderStatus(s) {
+    clearTimeout(pollTimer);
+
+    if (s.running) {
+      const progress = s.total ? `${s.current}/${s.total}` : '…';
+      setStatus(`${t.running} (${progress}) ${s.last_message || ''}`.trim());
+      pollTimer = setTimeout(poll, 1200);
+      return;
+    }
+
+    if (s.error) {
+      setStatus(`${t.error}: ${s.error}`, true);
+      document.querySelectorAll('#reprocessAllBtn, .reprocess-one-btn').forEach(b => b.disabled = false);
+    } else if (s.counts) {
+      const c = s.counts;
+      setStatus(`${t.done} — succeeded=${c.succeeded} pending_review=${c.pending_review} `
+               + `rejected=${c.rejected} failed=${c.failed}`);
+      // Queue composition changed (items may have left manual_review/) — reload to reflect it.
+      setTimeout(() => location.reload(), 1200);
+    }
+  }
+
+  function setStatus(msg, isError) {
+    const el = document.getElementById('reprocessStatus');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isError ? '#842029' : '#555';
+  }
+
+  // Resume polling if a reprocess was already running when this page loaded
+  fetch('/manual-review/reprocess/status')
+    .then(r => r.json())
+    .then(s => { if (s.running) { document.querySelectorAll('#reprocessAllBtn, .reprocess-one-btn').forEach(b => b.disabled = true); renderStatus(s); } })
+    .catch(() => {});
+})();
+</script>
+{% endif %}
 {% endblock %}

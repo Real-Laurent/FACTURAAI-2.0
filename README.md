@@ -198,6 +198,23 @@ FacturaAI 2.0/
 
 Flagged invoices go to `manual_review/` and are editable in the dashboard at `/review`.
 
+To retry files in `manual_review/` after a bug fix (rather than hand-editing
+each one, or re-running the whole Gmail backfill and reprocessing files
+that already succeeded), use:
+
+```bash
+python scripts/reprocess_manual_review.py                       # every file in manual_review/
+python scripts/reprocess_manual_review.py --file "some name.pdf" # just one
+```
+
+Runs the same extraction → classification → filing pipeline as new mail,
+purely on files already downloaded — no Gmail connection is touched.
+Successes move to `output/` normally; files that still need review stay in
+`manual_review/` with `retry_count`/`last_retried_at` updated so it's clear
+they were retried, not just untouched. Also available from the dashboard's
+**Review** page (`/review`) — a "Reprocess All" button, and a per-item
+"Reprocess" button for retrying just one file.
+
 ## Tax reports
 
 `/reports/303` and `/reports/390` (quarterly/annual IVA) work exactly as in

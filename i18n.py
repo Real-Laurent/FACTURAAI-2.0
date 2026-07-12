@@ -108,6 +108,16 @@ _T: dict[str, dict[str, str]] = {
                           "en": "Save and mark reviewed",
                           "zh": "保存并标记为已审核"},
 
+    "reprocess_all_btn": {"es": "Reprocesar todo",  "en": "Reprocess All", "zh": "全部重新处理"},
+    "reprocess_btn":     {"es": "Reprocesar",       "en": "Reprocess",     "zh": "重新处理"},
+    "reprocess_running": {"es": "Ejecutando…",      "en": "Running…",      "zh": "正在运行…"},
+    "reprocess_busy":    {"es": "Ya hay un reprocesamiento en curso.",
+                          "en": "A reprocess is already running.",
+                          "zh": "已有一个重新处理任务正在运行。"},
+    "reprocess_done":    {"es": "Completado",       "en": "Done",          "zh": "已完成"},
+    "reprocess_error":   {"es": "Error",            "en": "Error",         "zh": "错误"},
+    "retried_label":     {"es": "Reintentado",      "en": "Retried",       "zh": "已重试"},
+
     # ── Health / status ───────────────────────────────────────────────────────
     "page_health":       {"es": "Estado del Sistema", "en": "System Status", "zh": "系统状态"},
     "last_heartbeat":    {"es": "Último heartbeat",   "en": "Last heartbeat","zh": "最近心跳"},
