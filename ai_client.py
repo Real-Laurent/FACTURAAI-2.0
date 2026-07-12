@@ -61,11 +61,15 @@ CLASSIFY_SCHEMA = {
         "confidence": {"type": "number"},
         "supplier_name": {
             "type": ["string", "null"],
-            "description": "Best-guess supplier/company name if is_factura is true, otherwise null.",
+            "description": "The ISSUING company's name, read from the letterhead/logo — never from a 'Datos del cliente'/'Datos fiscales'/'Facturado a' box. Null if is_factura is false or the issuer isn't clear.",
+        },
+        "supplier_cif": {
+            "type": ["string", "null"],
+            "description": "The ISSUING company's own CIF/NIF, printed near their name/logo in the letterhead — never the customer's CIF from a 'Datos del cliente'/'Datos fiscales' box. Null if not visible or is_factura is false.",
         },
         "reasoning": {"type": "string"},
     },
-    "required": ["is_factura", "confidence", "supplier_name", "reasoning"],
+    "required": ["is_factura", "confidence", "supplier_name", "supplier_cif", "reasoning"],
     "additionalProperties": False,
 }
 
@@ -73,7 +77,21 @@ CLASSIFY_SYSTEM = """You classify documents for a Spanish bar business's invoice
 You will be given text extracted from a PDF (digitally or via OCR — expect occasional OCR noise).
 Decide whether it is a factura (invoice) — a document billing the business for goods or services,
 showing a supplier, and normally a net amount, VAT, and total. Receipts, contracts, bank statements,
-marketing material, POS reports, and other documents are NOT facturas."""
+marketing material, POS reports, and other documents are NOT facturas.
+
+A Spanish factura names TWO companies, and mixing them up is the single most common mistake here:
+- The SUPPLIER (emisor) — the company issuing the invoice and billing for the goods/services. This
+  is the company in the letterhead/logo at the top of the document, usually right beside the word
+  "FACTURA" and the invoice number, with ITS OWN CIF/NIF printed next to its name/address.
+- The CUSTOMER (cliente/receptor) — the company being billed. This is shown in a separate box,
+  usually labelled "Datos del cliente", "Datos fiscales", "Facturado a", or similar — typically
+  lower on the page or off to one side, separate from the letterhead.
+
+supplier_name and supplier_cif must ALWAYS be read from the letterhead/issuer — NEVER from a
+"Datos del cliente" / "Datos fiscales" / "Facturado a" box, even if that box's company looks more
+prominent or is repeated more often in the text. If you can't clearly tell which company issued
+the document, say so in reasoning, lower confidence, and leave supplier_name/supplier_cif null
+rather than guessing from the customer box."""
 
 
 @dataclass
@@ -81,6 +99,7 @@ class ClassificationResult:
     is_factura: bool
     confidence: float
     supplier_name: Optional[str]
+    supplier_cif: Optional[str]
     reasoning: str
 
 
@@ -103,6 +122,7 @@ def classify_invoice(text: str) -> ClassificationResult:
         is_factura=bool(data["is_factura"]),
         confidence=float(data["confidence"]),
         supplier_name=data.get("supplier_name"),
+        supplier_cif=data.get("supplier_cif"),
         reasoning=data.get("reasoning", ""),
     )
 
@@ -151,9 +171,16 @@ FacturaAI pipeline. You will be given the extracted text of ONE sample invoice f
 with no existing extractor, plus the BaseExtractor contract, shared parsing helpers, and a few
 real extractors as style/pattern references below.
 
+The sample text names TWO companies — the SUPPLIER (emisor), shown in the letterhead/logo at the
+top with its own CIF/NIF next to its name, and the CUSTOMER (cliente/receptor), shown separately
+in a box usually labelled "Datos del cliente", "Datos fiscales", or "Facturado a". supplier_name
+and every identifier can_handle()/extract() key off must come from the letterhead/issuer — never
+from the customer box, even if that company's name appears more often in the text.
+
 Write ONE new Python module implementing a BaseExtractor subclass for this supplier:
-- can_handle(text) must reliably recognise future invoices from the SAME supplier (match on
-  company name, CIF/NIF, or another stable identifier — not incidental formatting).
+- can_handle(text) must reliably recognise future invoices from the SAME supplier (match on the
+  ISSUER's company name, CIF/NIF, or another stable identifier from the letterhead — not the
+  customer's, and not incidental formatting).
 - extract(text) must populate date, supplier, invoice_number, net_amount, vat_amount, vat_rate
   (or vat_breakdown for mixed-rate invoices), total_amount, currency using regex against the
   actual layout you see in the sample text. Use parse_amount/parse_date/collapse_spaced_chars
@@ -245,7 +272,14 @@ that is orders of magnitude larger or smaller than what the text shows (a likely
 or OCR error), a total that doesn't match what's printed on the invoice, or a supplier name
 that doesn't appear in the text at all. Do NOT flag things that are merely unusual but clearly
 correct per the text (a genuinely large one-off order, an odd but valid VAT rate, etc.) — this
-check exists to catch extraction bugs, not to second-guess legitimate invoices."""
+check exists to catch extraction bugs, not to second-guess legitimate invoices.
+
+One specific, common extraction bug to check for: the extracted supplier must be the ISSUER of
+the invoice (the company in the letterhead/logo, with its own CIF/NIF there), not the customer
+being billed (the company in a separate "Datos del cliente"/"Datos fiscales"/"Facturado a" box).
+If the extracted supplier name actually matches the customer/recipient in the text rather than
+the issuer, flag it as implausible and say so explicitly in issue — this is a supplier/customer
+mix-up, not a legitimate extraction."""
 
 
 @dataclass

@@ -39,6 +39,12 @@ ai:
   # Skip the manual_review checkpoint for newly generated extractors once
   # they pass the self-test. Leave false until you trust the pipeline.
   auto_trust_new_extractors: false
+  # CIF/NIF(s) of this business's own company. If an invoice's ISSUER (letterhead)
+  # CIF matches one of these, it's treated as our own outgoing document (e.g. a
+  # Factura venta) instead of a new-supplier candidate — routed to rejected/
+  # instead of triggering extractor codegen. Format doesn't matter (spaces/dashes
+  # are ignored when comparing). Leave empty to disable this check.
+  own_company_cifs: []
 
 onedrive:
   enabled: false

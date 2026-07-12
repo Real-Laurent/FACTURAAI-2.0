@@ -78,6 +78,9 @@ def process_pdf(pdf_path: str, source: str = "scan") -> ProcessingResult:
     if detection.outcome == DetectionOutcome.NOT_FACTURA:
         return _reject(pdf_path, file_hash, source, detection.reasoning, result)
 
+    if detection.outcome == DetectionOutcome.OWN_DOCUMENT:
+        return _reject(pdf_path, file_hash, source, detection.reasoning, result)
+
     extraction, extractor_name, extractor_pending, detect_reason = _extract(text, detection, cfg)
 
     if extraction.not_invoice:

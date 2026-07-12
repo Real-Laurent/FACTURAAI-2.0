@@ -4,6 +4,8 @@ Factura detection — the first AI-driven step in the pipeline.
 For every invoice, decide one of:
   KNOWN_SUPPLIER        an existing extractor already recognises it (zero API calls)
   NEW_SUPPLIER          Claude judges it a real factura, but no extractor handles it yet
+  OWN_DOCUMENT           the issuer's CIF matches ai.own_company_cifs — this business's own
+                         outgoing document (e.g. a Factura venta it issued), not a purchase
   NOT_FACTURA            Claude judges it isn't an invoice at all
   CLASSIFICATION_FAILED  the API call itself failed — route to manual_review, don't guess
   UNVERIFIED             ai.enabled is false — same fallback behaviour v1 had with no AI
@@ -12,6 +14,7 @@ For every invoice, decide one of:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -27,9 +30,16 @@ log = logging.getLogger(__name__)
 class DetectionOutcome(Enum):
     KNOWN_SUPPLIER = "known_supplier"
     NEW_SUPPLIER = "new_supplier"
+    OWN_DOCUMENT = "own_document"
     NOT_FACTURA = "not_factura"
     CLASSIFICATION_FAILED = "classification_failed"
     UNVERIFIED = "unverified"
+
+
+def _normalize_cif(cif: Optional[str]) -> str:
+    """Strip everything but letters/digits and uppercase, so 'A-78061389',
+    'a78061389 ', and 'A78061389' all compare equal."""
+    return re.sub(r"[^A-Za-z0-9]", "", cif or "").upper()
 
 
 @dataclass
@@ -94,6 +104,23 @@ def detect(text: str) -> DetectionResult:
             outcome=DetectionOutcome.NOT_FACTURA,
             supplier_hint=result.supplier_name,
             reasoning=result.reasoning,
+            confidence=result.confidence,
+        )
+
+    own_cifs = {_normalize_cif(c) for c in get_config().get("ai", {}).get("own_company_cifs", [])}
+    own_cifs.discard("")
+    if own_cifs and _normalize_cif(result.supplier_cif) in own_cifs:
+        log.info(
+            "Issuer CIF %s matches ai.own_company_cifs — treating as our own document, not a new supplier: %s",
+            result.supplier_cif, result.reasoning,
+        )
+        return DetectionResult(
+            outcome=DetectionOutcome.OWN_DOCUMENT,
+            supplier_hint=result.supplier_name,
+            reasoning=(
+                f"issuer CIF {result.supplier_cif} matches a configured own_company_cifs entry — "
+                f"this looks like our own outgoing document (e.g. a Factura venta), not a purchase"
+            ),
             confidence=result.confidence,
         )
 
