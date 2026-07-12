@@ -81,25 +81,10 @@ signal.signal(signal.SIGINT, _handle_signal)
 _cycle_number = 0
 
 
-def run_cycle():
-    global _cycle_number
-    _cycle_number += 1
-    t0 = time.monotonic()
-    found = processed = failed = skipped = 0
-
-    # Collect new PDFs from watcher queue + scan for any missed at startup
-    scan_paths = watcher.drain()
-    if _cycle_number == 1:
-        scan_paths += watcher.scan_existing()
-
-    # Gmail
-    gmail_paths = poll_gmail()
-
-    all_paths = list(dict.fromkeys(scan_paths + gmail_paths))  # deduplicate order
-    found = len(all_paths)
-
-    for path in all_paths:
-        source = "gmail" if path.startswith(get_config()["paths"]["inbox_gmail"]) else "scan"
+def _process_paths(paths: list[str], source: str) -> tuple[int, int, int]:
+    """Run process_pdf() over paths, returning (processed, failed, skipped)."""
+    processed = failed = skipped = 0
+    for path in paths:
         try:
             result = process_pdf(path, source=source)
             if result.success:
@@ -111,6 +96,33 @@ def run_cycle():
         except Exception as e:
             log.error("Unhandled error processing %s: %s", path, e)
             failed += 1
+    return processed, failed, skipped
+
+
+def run_cycle():
+    global _cycle_number
+    _cycle_number += 1
+    t0 = time.monotonic()
+
+    # Collect + process local scan files first, independent of Gmail — a
+    # slow or stuck Gmail poll (e.g. waiting on a first-time OAuth browser
+    # flow) must never delay files already sitting in inbox/scan/.
+    scan_paths = list(dict.fromkeys(watcher.drain()))
+    if _cycle_number == 1:
+        scan_paths = list(dict.fromkeys(scan_paths + watcher.scan_existing()))
+    scan_processed, scan_failed, scan_skipped = _process_paths(scan_paths, "scan")
+
+    # Gmail — poll_gmail() already catches its own exceptions and has a
+    # bounded wait on first-time auth (see gmail_poller._get_service), so
+    # this can't hang the loop indefinitely, but scan files above are
+    # processed regardless of what happens here.
+    gmail_paths = [p for p in dict.fromkeys(poll_gmail()) if p not in scan_paths]
+    gmail_processed, gmail_failed, gmail_skipped = _process_paths(gmail_paths, "gmail")
+
+    found = len(scan_paths) + len(gmail_paths)
+    processed = scan_processed + gmail_processed
+    failed = scan_failed + gmail_failed
+    skipped = scan_skipped + gmail_skipped
 
     duration = time.monotonic() - t0
     db.log_cycle(_cycle_number, found, processed, failed, skipped, duration)

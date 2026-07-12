@@ -32,7 +32,11 @@ def _get_service():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(creds_file, scopes)
-            creds = flow.run_local_server(port=0)
+            # Cap the wait for the browser consent flow — an incomplete or
+            # never-started auth must not hang the whole processing loop
+            # (which would otherwise starve inbox/scan/ of every cycle
+            # until someone finishes the Google sign-in).
+            creds = flow.run_local_server(port=0, timeout_seconds=120)
         with open(token_file, "w") as f:
             f.write(creds.to_json())
 
